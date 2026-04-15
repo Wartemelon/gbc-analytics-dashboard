@@ -20,6 +20,13 @@ export async function POST(request: Request) {
     const payload = await parseRetailCrmWebhookRequest(request);
     const order = extractWebhookOrder(payload);
 
+    console.log("RetailCRM webhook received:", {
+      event: payload.event ?? null,
+      hasOrder: Boolean(payload.order),
+      parsedOrderId: order?.id ?? null,
+      parsedTotalSumm: order?.totalSumm ?? null
+    });
+
     if (!order) {
       return NextResponse.json(
         {
@@ -82,6 +89,13 @@ export async function POST(request: Request) {
 export async function GET() {
   return NextResponse.json({
     ok: true,
-    message: "RetailCRM webhook endpoint is ready. Use POST requests."
+    message: "RetailCRM webhook endpoint is ready. Use POST requests.",
+    env: {
+      hasTelegramBotToken: Boolean(process.env.TELEGRAM_BOT_TOKEN),
+      hasTelegramChatId: Boolean(process.env.TELEGRAM_CHAT_ID),
+      hasSupabaseUrl: Boolean(process.env.NEXT_PUBLIC_SUPABASE_URL),
+      hasSupabaseAnonKey: Boolean(process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY),
+      hasSupabaseServiceRoleKey: Boolean(process.env.SUPABASE_SERVICE_ROLE_KEY)
+    }
   });
 }

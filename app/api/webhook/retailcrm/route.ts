@@ -10,6 +10,7 @@ import {
   formatHighValueOrderMessage,
   sendTelegramMessage
 } from "@/lib/telegram";
+import { upsertWebhookOrderToSupabase } from "@/lib/retailcrm-order-sync";
 
 export const dynamic = "force-dynamic";
 export const revalidate = 0;
@@ -30,11 +31,16 @@ export async function POST(request: Request) {
     }
 
     if (!isHighValueOrder(order.totalSumm)) {
+      if (process.env.SUPABASE_SERVICE_ROLE_KEY) {
+        await upsertWebhookOrderToSupabase(order, payload);
+      }
+
       return NextResponse.json({
         ok: true,
         notified: false,
         reason: `Order total is below threshold ${HIGH_VALUE_ORDER_THRESHOLD}.`,
-        orderId: order.id
+        orderId: order.id,
+        syncedToSupabase: Boolean(process.env.SUPABASE_SERVICE_ROLE_KEY)
       });
     }
 
@@ -46,11 +52,16 @@ export async function POST(request: Request) {
 
     await sendTelegramMessage(message);
 
+    if (process.env.SUPABASE_SERVICE_ROLE_KEY) {
+      await upsertWebhookOrderToSupabase(order, payload);
+    }
+
     return NextResponse.json({
       ok: true,
       notified: true,
       orderId: order.id,
-      totalSumm: order.totalSumm
+      totalSumm: order.totalSumm,
+      syncedToSupabase: Boolean(process.env.SUPABASE_SERVICE_ROLE_KEY)
     });
   } catch (error) {
     console.error("RetailCRM webhook handling failed:", error);
